@@ -21,27 +21,27 @@ namespace ConsoleCSOM
             {
                 using (var clientContextHelper = new ClientContextHelper())
                 {
-                    //ClientContext ctx = GetContext(clientContextHelper);
-                    //ctx.Load(ctx.Web);
-                    //await ctx.ExecuteQueryAsync();
+                    ClientContext ctx = GetContext(clientContextHelper);
+                    ctx.Load(ctx.Web);
+                    await ctx.ExecuteQueryAsync();
                     //Exercise 3 – Permission Inheritance
-                    ////In the Finance and Accounting subsite, go to the List settings of the Accounts custom list and 
-                    ////stop inheriting permissions.
-                    //await StopInheritingPermissions(ctx, "Account");
+                    //In the Finance and Accounting subsite, go to the List settings of the Accounts custom list and 
+                    //stop inheriting permissions.
+                    await StopInheritingPermissions(ctx, "Account");
 
-                    // Add another user to the permission list with Design permissions.
+                    ////Add another user to the permission list with Design permissions.
                     //await GrantPermissions(ctx, "Account", "tu.nguyen.dev@devtusturu.onmicrosoft.com", "Design");
 
                     ////re - establish inheritance by selecting Delete unique permissions. 
                     //await ResetInheritingPermissions(ctx, "Account");
-                    //Console.WriteLine($"Site {ctx.Web.Title}");
+                    Console.WriteLine($"Site {ctx.Web.Title}");
 
                     //Exercise 4 – Creating	Permission Levels and Groups
-                    ClientContext ctxRoot = GetContextRootSite(clientContextHelper);
-                    ctxRoot.Load(ctxRoot.Web);
-                    //await CreateNewPermissionLevels(ctxRoot);
-                    await CreateNewGroup(ctxRoot);
-                    Console.WriteLine($"Site {ctxRoot.Web.Title}");
+                    //ClientContext ctxRoot = GetContextRootSite(clientContextHelper);
+                    //ctxRoot.Load(ctxRoot.Web);
+                    ////await CreateNewPermissionLevels(ctxRoot);
+                    //await CreateNewGroup(ctxRoot);
+                    //Console.WriteLine($"Site {ctxRoot.Web.Title}");
                 }
                 Console.WriteLine($"Press Any Key To Stop!");
                 Console.ReadKey();
@@ -74,7 +74,16 @@ namespace ConsoleCSOM
             ctx.Load(targetList);
             await ctx.ExecuteQueryAsync();
 
-            //Stop Inheritance from parent
+            // Stop Inheritance from parent
+            // bool copyRoleAssignments
+            // (
+            //  True:  copy the role assignments from the parent securable object
+            //  False: must contain only 1 role assignment containing the current user after the operation.
+            // )
+            // bool clearSubscopes
+            // (
+            // clear unique permissions of child objects so that they will subsequently inherit permissions from the parent Web site or list        
+            // )
             targetList.BreakRoleInheritance(false, false);
             targetList.Update();
             await ctx.ExecuteQueryAsync();
@@ -102,6 +111,7 @@ namespace ConsoleCSOM
             ctx.Load(user);
             await ctx.ExecuteQueryAsync();
 
+            // Get the Role Definition (Permission Level)
             RoleDefinition role = ctx.Web.RoleDefinitions.GetByName(permission);
             RoleDefinitionBindingCollection roleDb = new RoleDefinitionBindingCollection(ctx);
             roleDb.Add(role);
@@ -135,18 +145,19 @@ namespace ConsoleCSOM
 
         private static async Task CreateNewGroup(ClientContext ctx)
         {
-            Group newgrp = ctx.Web.SiteGroups.Add(new GroupCreationInformation
+            Group newGroup = ctx.Web.SiteGroups.Add(new GroupCreationInformation
             {
                 Title = "Test Group",
                 Description = "Test Group With Permission Is Test Level"
             });
+            await ctx.ExecuteQueryAsync();
 
             User user = ctx.Web.EnsureUser("tu.nguyen.dev@devtusturu.onmicrosoft.com");
             ctx.Load(user);
             await ctx.ExecuteQueryAsync();
 
             // Add User to Group
-            newgrp.Users.Add(new UserCreationInformation
+            newGroup.Users.Add(new UserCreationInformation
             {
                 Email = user.Email,
                 LoginName = user.LoginName,
@@ -164,9 +175,9 @@ namespace ConsoleCSOM
             roleDb.Add(ctx.Web.RoleDefinitions.GetByName("Test Level"));
 
             // Bind the Newly Created Permission Level to the new User Group
-            ctx.Web.RoleAssignments.Add(newgrp, roleDb);
+            ctx.Web.RoleAssignments.Add(newGroup, roleDb);
 
-            ctx.Load(newgrp);
+            ctx.Load(newGroup);
             await ctx.ExecuteQueryAsync();
         }
     }
